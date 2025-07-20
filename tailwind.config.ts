@@ -84,7 +84,10 @@ export default {
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-accent': 'var(--gradient-accent)',
-				'gradient-timer': 'var(--gradient-timer)'
+				'gradient-timer': 'var(--gradient-timer)',
+				'gradient-map': 'var(--gradient-map)',
+				'gradient-ancient': 'var(--gradient-ancient)',
+				'gradient-battlefield': 'var(--gradient-battlefield)'
 			},
 			boxShadow: {
 				'glow': 'var(--shadow-glow)',

@@ -94,8 +94,10 @@ export const TimerCard = ({
       "relative overflow-hidden transition-all duration-300",
       "bg-gradient-timer border-timer-border shadow-card",
       "hover:shadow-glow hover:border-primary/50",
+      timer.type === 'rune' && "rune-mystical",
+      timer.type === 'roshan' && isActive && "ancient-glow",
       isActive && "animate-glow-pulse",
-      isAlertState && "border-accent bg-gradient-accent",
+      isAlertState && "border-accent bg-gradient-accent ancient-glow",
       className
     )}>
       {/* Progress bar */}

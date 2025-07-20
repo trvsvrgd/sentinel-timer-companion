@@ -252,9 +252,9 @@ export const TimerManager = () => {
   }, [startTimer, pauseAllTimers]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 dota-bg-pattern">
       {/* Header Controls */}
-      <Card className="p-4 bg-gradient-timer border-timer-border">
+      <Card className="p-4 bg-gradient-ancient border-timer-border ancient-glow">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-primary">Sentinel Timer</h1>

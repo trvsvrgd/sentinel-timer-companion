@@ -53,6 +53,13 @@ All colors MUST be HSL.
     --timer-bg: 220 20% 10%;
     --timer-border: 220 40% 30%;
     
+    /* Dota 2 Background Elements */
+    --map-texture: radial-gradient(ellipse at center, hsl(220 30% 8%) 0%, hsl(220 40% 5%) 50%, hsl(220 20% 3%) 100%);
+    --ancient-glow: 220 80% 60%;
+    --creep-path: 35 40% 25%;
+    --river-blue: 200 60% 40%;
+    --forest-green: 120 30% 20%;
+    
     /* Success/Ready states */
     --success: 120 60% 50%;
     --success-foreground: 120 100% 10%;
@@ -75,6 +82,12 @@ All colors MUST be HSL.
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-glow)));
     --gradient-timer: linear-gradient(135deg, hsl(var(--timer-bg)), hsl(var(--card)));
+    --gradient-map: var(--map-texture);
+    --gradient-ancient: radial-gradient(circle at 30% 70%, hsl(var(--ancient-glow) / 0.1) 0%, transparent 50%), 
+                        linear-gradient(135deg, hsl(var(--background)), hsl(220 25% 6%));
+    --gradient-battlefield: linear-gradient(180deg, hsl(220 30% 8%) 0%, hsl(220 25% 5%) 50%, hsl(220 30% 3%) 100%),
+                           radial-gradient(ellipse at 20% 80%, hsl(var(--roshan) / 0.05), transparent),
+                           radial-gradient(ellipse at 80% 20%, hsl(var(--rune) / 0.03), transparent);
     
     /* Shadows and glows */
     --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
@@ -94,5 +107,60 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    background-image: var(--gradient-battlefield);
+    background-attachment: fixed;
+    background-size: 100% 100%, 200% 200%, 300% 300%;
+    background-repeat: no-repeat;
+    animation: battlefield-shimmer 20s ease-in-out infinite;
   }
+}
+
+@layer utilities {
+  .dota-bg-pattern {
+    background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--primary) / 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, hsl(var(--accent) / 0.02) 0%, transparent 50%),
+      linear-gradient(45deg, transparent 40%, hsl(var(--border) / 0.1) 50%, transparent 60%);
+    background-size: 400px 400px, 300px 300px, 100px 100px;
+    animation: pattern-drift 30s linear infinite;
+  }
+  
+  .ancient-glow {
+    box-shadow: 
+      0 0 40px hsl(var(--primary) / 0.3),
+      inset 0 0 20px hsl(var(--primary) / 0.1),
+      0 0 80px hsl(var(--primary) / 0.1);
+  }
+  
+  .rune-mystical {
+    position: relative;
+  }
+  
+  .rune-mystical::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg, 
+      hsl(var(--rune) / 0.3), 
+      hsl(var(--primary) / 0.2), 
+      hsl(var(--accent) / 0.3));
+    border-radius: inherit;
+    z-index: -1;
+    animation: rune-rotate 3s linear infinite;
+  }
+}
+
+@keyframes battlefield-shimmer {
+  0%, 100% { background-position: 0% 0%, 0% 0%, 0% 0%; }
+  50% { background-position: 0% 0%, 20% 20%, 30% 30%; }
+}
+
+@keyframes pattern-drift {
+  0% { background-position: 0% 0%, 0% 0%, 0% 0%; }
+  100% { background-position: 400px 400px, -300px -300px, 100px 100px; }
+}
+
+@keyframes rune-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
