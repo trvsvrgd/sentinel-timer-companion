@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TimerCard, type Timer } from './TimerCard';
+import { AudioBank } from './AudioBank';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -329,6 +330,9 @@ export const TimerManager = () => {
           </div>
         </div>
       </Card>
+
+      {/* Audio Bank - Only visible in test mode */}
+      {testMode && <AudioBank />}
 
       {/* Timer Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
