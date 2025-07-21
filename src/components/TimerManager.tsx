@@ -59,7 +59,7 @@ export const TimerManager = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [side, setSide] = useState<'radiant' | 'dire'>('radiant');
-  const [lane, setLane] = useState<'safe' | 'mid' | 'off' | 'jungle' | 'support'>('safe');
+  const [lane, setLane] = useState<'safe' | 'mid' | 'off'>('safe');
   const { toast } = useToast();
 
   // Update timers every second
@@ -276,7 +276,7 @@ export const TimerManager = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                const lanes: Array<'safe' | 'mid' | 'off' | 'jungle' | 'support'> = ['safe', 'mid', 'off', 'jungle', 'support'];
+                const lanes: Array<'safe' | 'mid' | 'off'> = ['safe', 'mid', 'off'];
                 const currentIndex = lanes.indexOf(lane);
                 const nextIndex = (currentIndex + 1) % lanes.length;
                 setLane(lanes[nextIndex]);
@@ -285,8 +285,6 @@ export const TimerManager = () => {
               {lane === 'safe' && '⚔️ Safe Lane'}
               {lane === 'mid' && '🎯 Mid Lane'}
               {lane === 'off' && '🛡️ Off Lane'}
-              {lane === 'jungle' && '🌳 Jungle'}
-              {lane === 'support' && '💎 Support'}
             </Button>
             <Button
               variant="outline"
