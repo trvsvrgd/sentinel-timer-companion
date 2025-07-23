@@ -8,28 +8,31 @@ export interface GameState {
   winner: number;
 }
 
+export type GSIConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
 export const useGameStateIntegration = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<GSIConnectionStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const maxRetries = 3;
 
   const connect = useCallback(() => {
-    try {
-      // GSI typically uses HTTP polling rather than WebSocket
-      // We'll use a polling approach to check for GSI data
-      setError(null);
-      pollGameState();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Connection failed');
-      setIsConnected(false);
-    }
-  }, []);
+    if (connectionStatus === 'connecting') return;
+    
+    setConnectionStatus('connecting');
+    setConnectionAttempts(0);
+    setError(null);
+    pollGameState();
+  }, [connectionStatus]);
 
   const pollGameState = useCallback(async () => {
     try {
+      setConnectionAttempts(prev => prev + 1);
+      
       // GSI typically writes to a local file or serves on localhost:3000
       // This is a common GSI endpoint for Dota 2
       const response = await fetch('http://localhost:3000/gamestate', {
@@ -53,9 +56,12 @@ export const useGameStateIntegration = () => {
           };
           
           setGameState(newGameState);
-          setIsConnected(true);
+          setConnectionStatus('connected');
           setLastSyncTime(Date.now());
           setError(null);
+          setConnectionAttempts(0);
+        } else {
+          throw new Error('Invalid GSI data format');
         }
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -63,43 +69,51 @@ export const useGameStateIntegration = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch game state';
       
-      // Only set error if we weren't connected before (to avoid spam)
-      if (isConnected) {
+      if (connectionAttempts >= maxRetries) {
+        setConnectionStatus('error');
+        setError(`GSI Connection Failed: ${errorMessage}. Please check that:\n1. GSI config file is set up correctly\n2. GSI server is running on localhost:3000\n3. Dota 2 is running with an active match`);
+      } else if (connectionStatus === 'connecting') {
+        // Continue trying while in connecting state
+        setError(null);
+      } else {
+        setConnectionStatus('disconnected');
         setError(errorMessage);
-        setIsConnected(false);
       }
     }
-  }, [isConnected]);
+  }, [connectionStatus, connectionAttempts, maxRetries]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    setIsConnected(false);
+    setConnectionStatus('disconnected');
     setGameState(null);
     setError(null);
+    setConnectionAttempts(0);
   }, []);
 
   const syncGameTime = useCallback((): number | null => {
-    if (!gameState || !isConnected) {
+    if (!gameState || connectionStatus !== 'connected') {
       return null;
     }
     
     // Return the current game time in seconds
     return gameState.game_time;
-  }, [gameState, isConnected]);
+  }, [gameState, connectionStatus]);
 
   const isGameInProgress = useCallback((): boolean => {
     return gameState?.game_state === 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS' || false;
   }, [gameState]);
 
-  // Auto-polling when connected
+  // Auto-polling when connected or connecting
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
-    if (isConnected || (!isConnected && !error)) {
-      interval = setInterval(pollGameState, 1000); // Poll every second
+    if (connectionStatus === 'connected') {
+      interval = setInterval(pollGameState, 1000); // Poll every second when connected
+    } else if (connectionStatus === 'connecting' && connectionAttempts < maxRetries) {
+      interval = setInterval(pollGameState, 2000); // Poll every 2 seconds when connecting
     }
     
     return () => {
@@ -107,14 +121,15 @@ export const useGameStateIntegration = () => {
         clearInterval(interval);
       }
     };
-  }, [isConnected, error, pollGameState]);
+  }, [connectionStatus, connectionAttempts, maxRetries, pollGameState]);
 
-  // Auto-reconnect logic
+  // Auto-reconnect logic (only after error state)
   useEffect(() => {
-    if (error && !isConnected) {
+    if (connectionStatus === 'error') {
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
-      }, 5000); // Retry every 5 seconds
+        setConnectionStatus('disconnected');
+        setError(null);
+      }, 10000); // Wait 10 seconds before allowing retry after error
     }
     
     return () => {
@@ -123,11 +138,12 @@ export const useGameStateIntegration = () => {
         reconnectTimeoutRef.current = null;
       }
     };
-  }, [error, isConnected, connect]);
+  }, [connectionStatus]);
 
   return {
     gameState,
-    isConnected,
+    connectionStatus,
+    isConnected: connectionStatus === 'connected',
     error,
     lastSyncTime,
     connect,

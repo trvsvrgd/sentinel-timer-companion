@@ -64,7 +64,7 @@ export const TimerManager = () => {
   const [lane, setLane] = useState<'safe' | 'mid' | 'off'>('safe');
   const [gameTimeOffset, setGameTimeOffset] = useState<number>(0); // Offset between game time and local time
   const { toast } = useToast();
-  const { gameState, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = useGameStateIntegration();
+  const { gameState, connectionStatus, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = useGameStateIntegration();
 
   // Update timers every second
   useEffect(() => {
@@ -245,6 +245,13 @@ export const TimerManager = () => {
         description: "Disconnected from Dota 2 GSI",
         variant: "default"
       });
+    } else if (connectionStatus === 'error') {
+      connect();
+      toast({
+        title: "GSI Retry",
+        description: "Retrying GSI connection...",
+        variant: "default"
+      });
     } else {
       connect();
       toast({
@@ -253,7 +260,7 @@ export const TimerManager = () => {
         variant: "default"
       });
     }
-  }, [isConnected, connect, disconnect, toast]);
+  }, [isConnected, connectionStatus, connect, disconnect, toast]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -327,12 +334,14 @@ export const TimerManager = () => {
               {lane === 'off' && '🛡️ Off Lane'}
             </Button>
             <Button
-              variant={isConnected ? "default" : "outline"}
+              variant={isConnected ? "default" : connectionStatus === 'error' ? "destructive" : "outline"}
               size="sm"
               onClick={toggleGSIConnection}
             >
               {isConnected ? <Wifi className="h-4 w-4 mr-1" /> : <WifiOff className="h-4 w-4 mr-1" />}
-              GSI
+              {connectionStatus === 'connecting' ? 'Connecting...' : 
+               connectionStatus === 'error' ? 'GSI Error' : 
+               isConnected ? 'GSI' : 'GSI'}
             </Button>
             <Button
               variant="outline"
@@ -373,23 +382,35 @@ export const TimerManager = () => {
         </div>
 
         {/* GSI Status */}
-        {gameState && (
-          <div className="mt-3 p-2 bg-muted rounded text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">GSI Status:</span>
-              <Badge variant={isConnected ? "default" : "destructive"}>
-                {isConnected ? "Connected" : "Disconnected"}
-              </Badge>
-            </div>
-            {gameState && (
-              <div className="mt-1 text-xs text-muted-foreground">
-                Game Time: {Math.floor(gameState.game_time / 60)}:{String(Math.floor(gameState.game_time % 60)).padStart(2, '0')} | 
-                State: {gameState.game_state.replace('DOTA_GAMERULES_STATE_', '')} |
-                {gameState.paused && " PAUSED"}
-              </div>
-            )}
+        <div className="mt-3 p-2 bg-muted rounded text-sm">
+          <div className="flex items-center justify-between">
+            <span className="font-medium">GSI Status:</span>
+            <Badge variant={
+              connectionStatus === 'connected' ? "default" : 
+              connectionStatus === 'error' ? "destructive" : 
+              connectionStatus === 'connecting' ? "secondary" : 
+              "outline"
+            }>
+              {connectionStatus === 'connected' ? "Connected" : 
+               connectionStatus === 'connecting' ? "Connecting..." : 
+               connectionStatus === 'error' ? "Error" : 
+               "Disconnected"}
+            </Badge>
           </div>
-        )}
+          {gameState && connectionStatus === 'connected' && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              Game Time: {Math.floor(gameState.game_time / 60)}:{String(Math.floor(gameState.game_time % 60)).padStart(2, '0')} | 
+              State: {gameState.game_state.replace('DOTA_GAMERULES_STATE_', '')} |
+              {gameState.paused && " PAUSED"}
+            </div>
+          )}
+          {error && connectionStatus === 'error' && (
+            <div className="mt-2 p-2 bg-destructive/10 border border-destructive/20 rounded text-xs text-destructive">
+              <div className="font-medium mb-1">Setup Required:</div>
+              <div className="whitespace-pre-line">{error}</div>
+            </div>
+          )}
+        </div>
 
         {/* Keyboard shortcuts info */}
         <div className="mt-3 text-sm text-muted-foreground">
