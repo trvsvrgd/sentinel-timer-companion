@@ -4,8 +4,9 @@ import { AudioBank } from './AudioBank';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, RotateCcw, Settings, TestTube } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings, TestTube, Wifi, WifiOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useGameStateIntegration } from '@/hooks/useGameStateIntegration';
 
 interface ActiveTimer {
   id: string;
@@ -61,7 +62,9 @@ export const TimerManager = () => {
   const [testMode, setTestMode] = useState(false);
   const [side, setSide] = useState<'radiant' | 'dire'>('radiant');
   const [lane, setLane] = useState<'safe' | 'mid' | 'off'>('safe');
+  const [gameTimeOffset, setGameTimeOffset] = useState<number>(0); // Offset between game time and local time
   const { toast } = useToast();
+  const { gameState, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = useGameStateIntegration();
 
   // Update timers every second
   useEffect(() => {
@@ -216,6 +219,42 @@ export const TimerManager = () => {
     });
   }, [toast]);
 
+  const syncWithGameTime = useCallback(() => {
+    const gameTime = syncGameTime();
+    if (gameTime !== null) {
+      setGameTimeOffset(Date.now() - (gameTime * 1000));
+      toast({
+        title: "GSI Sync Complete",
+        description: `Synced with game time: ${Math.floor(gameTime / 60)}:${String(Math.floor(gameTime % 60)).padStart(2, '0')}`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "GSI Sync Failed",
+        description: "Could not sync with game time. Check GSI connection.",
+        variant: "destructive"
+      });
+    }
+  }, [syncGameTime, toast]);
+
+  const toggleGSIConnection = useCallback(() => {
+    if (isConnected) {
+      disconnect();
+      toast({
+        title: "GSI Disconnected",
+        description: "Disconnected from Dota 2 GSI",
+        variant: "default"
+      });
+    } else {
+      connect();
+      toast({
+        title: "GSI Connecting",
+        description: "Attempting to connect to Dota 2 GSI...",
+        variant: "default"
+      });
+    }
+  }, [isConnected, connect, disconnect, toast]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -288,6 +327,22 @@ export const TimerManager = () => {
               {lane === 'off' && '🛡️ Off Lane'}
             </Button>
             <Button
+              variant={isConnected ? "default" : "outline"}
+              size="sm"
+              onClick={toggleGSIConnection}
+            >
+              {isConnected ? <Wifi className="h-4 w-4 mr-1" /> : <WifiOff className="h-4 w-4 mr-1" />}
+              GSI
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncWithGameTime}
+              disabled={!isConnected || !isGameInProgress()}
+            >
+              Sync
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => setTestMode(!testMode)}
@@ -316,6 +371,25 @@ export const TimerManager = () => {
             Reset All
           </Button>
         </div>
+
+        {/* GSI Status */}
+        {gameState && (
+          <div className="mt-3 p-2 bg-muted rounded text-sm">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">GSI Status:</span>
+              <Badge variant={isConnected ? "default" : "destructive"}>
+                {isConnected ? "Connected" : "Disconnected"}
+              </Badge>
+            </div>
+            {gameState && (
+              <div className="mt-1 text-xs text-muted-foreground">
+                Game Time: {Math.floor(gameState.game_time / 60)}:{String(Math.floor(gameState.game_time % 60)).padStart(2, '0')} | 
+                State: {gameState.game_state.replace('DOTA_GAMERULES_STATE_', '')} |
+                {gameState.paused && " PAUSED"}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Keyboard shortcuts info */}
         <div className="mt-3 text-sm text-muted-foreground">
