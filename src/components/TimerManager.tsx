@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, RotateCcw, Settings, TestTube, Wifi, WifiOff, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useElectronGSI } from '@/hooks/useElectronGSI';
 import { useGameStateIntegration } from '@/hooks/useGameStateIntegration';
 
 interface ActiveTimer {
@@ -67,7 +68,12 @@ export const TimerManager = () => {
   const [gameTimeOffset, setGameTimeOffset] = useState<number>(0); // Offset between game time and local time
   const [showInstallWizard, setShowInstallWizard] = useState(false);
   const { toast } = useToast();
-  const { gameState, connectionStatus, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = useGameStateIntegration();
+  
+  // Use Electron GSI if available, fallback to web GSI
+  const electronGSI = useElectronGSI();
+  const webGSI = useGameStateIntegration();
+  const { gameState, connectionStatus, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = 
+    electronGSI.isElectron ? electronGSI : webGSI;
 
   // Update timers every second
   useEffect(() => {
@@ -302,6 +308,9 @@ export const TimerManager = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [startTimer, pauseAllTimers]);
 
+  // Show Electron status in the UI
+  const isElectronApp = electronGSI.isElectron;
+
   return (
     <div className="space-y-4 dota-bg-pattern">
       {/* Header Controls */}
@@ -312,6 +321,11 @@ export const TimerManager = () => {
             <Badge variant={testMode ? "destructive" : "secondary"}>
               {testMode ? "TEST MODE" : "LIVE"}
             </Badge>
+            {isElectronApp && (
+              <Badge variant="default" className="bg-green-500">
+                DESKTOP
+              </Badge>
+            )}
           </div>
           
           <div className="flex items-center gap-2">

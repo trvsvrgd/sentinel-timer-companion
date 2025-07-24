@@ -1,226 +1,200 @@
-# Sentinel Timer - Dota 2 Timer Assistant
+# Sentinel Timer - Dota 2 Timer Companion
 
-A real-time timer application for Dota 2 that tracks important game events like Roshan spawns, rune respawns, and neutral creep pulls. Features Game State Integration (GSI) for automatic synchronization with your Dota 2 match.
+A sophisticated timer application for Dota 2 players to track important game events like Roshan respawn, rune spawns, and neutral pulls. Features automatic Game State Integration (GSI) for seamless timer synchronization.
 
 ## Features
 
-- **Timer Management**: Track Roshan, Bounty Runes, Power Runes, Lotus, and Neutral Pulls
-- **Game State Integration (GSI)**: Automatically sync with Dota 2's game time
-- **Audio Alerts**: Built-in Dota 2-themed sounds with custom audio upload support
-- **Keyboard Shortcuts**: Quick timer controls for in-game use
-- **Test Mode**: Configure and test audio alerts
-- **Responsive Design**: Works on desktop and mobile
+- ⏰ **Smart Timers**: Track Roshan, Bounty Runes, Power Runes, Lotus, and Neutral Pulls
+- 🎮 **GSI Integration**: Automatic sync with your live Dota 2 match
+- 🖥️ **Desktop App**: Automatic GSI server management (no manual setup required)
+- 🌐 **Web Version**: Also works as a web app with manual GSI setup
+- ⚡ **Game Mode Support**: Optimized for both All Pick and Turbo modes
+- 🎯 **Position Aware**: Configure for Radiant/Dire and Safe/Mid/Off lanes
+- ⌨️ **Keyboard Shortcuts**: Quick timer controls with hotkeys
+- 🔊 **Audio Alerts**: Sound notifications when timers complete
+- 🎨 **Dota 2 Themed**: Beautiful UI inspired by Dota 2's aesthetic
 
 ## Quick Start
 
-### Installation & Development
+### Option 1: Desktop App (Recommended)
+1. Download the latest desktop app from releases
+2. Install and launch Sentinel Timer
+3. **That's it!** GSI server starts automatically
+4. Launch Dota 2 and start a match
+5. Timers will automatically sync with your game
 
-```sh
-# Clone the repository
-git clone <YOUR_GIT_URL>
+### Option 2: Web Version
+If you prefer using the web version, you'll need to set up GSI manually:
 
-# Navigate to project directory
-cd <YOUR_PROJECT_NAME>
+#### GSI Setup Guide
 
-# Install dependencies
-npm i
-
-# Start development server
-npm run dev
-```
-
-### Basic Usage
-
-1. **Manual Mode**: Click timer buttons when events occur in-game
-2. **GSI Mode**: Set up GSI integration for automatic game time sync
-3. **Test Mode**: Use the test toggle to configure audio alerts
-
-## GSI (Game State Integration) Setup
-
-For automatic synchronization with Dota 2, follow these steps:
-
-### Step 1: Create GSI Configuration File
-
-1. Navigate to your Dota 2 directory:
+**Step 1: Create GSI Config File**
+1. Navigate to your Dota 2 cfg folder:
    ```
    Steam/steamapps/common/dota 2 beta/game/dota/cfg/gamestate_integration/
    ```
-
-2. Create a new file named `gamestate_integration_sentineltimer.cfg`
-
-3. Add this content to the file:
+2. Create a file named: `gamestate_integration_sentineltimer.cfg`
+3. Add this content:
    ```
-   "Dota 2 Integration Configuration"
+   "dota2-gsi Configuration"
    {
-       "uri"          "http://localhost:3000/"
-       "timeout"      "5.0"
-       "buffer"       "0.1"
-       "throttle"     "0.1"
-       "heartbeat"    "30.0"
+       "uri"               "http://localhost:3000/gamestate"
+       "timeout"           "5.0"
+       "buffer"            "0.1"
+       "throttle"          "0.5"
+       "heartbeat"         "30.0"
        "data"
        {
-           "buildings"    "1"
-           "provider"     "1"
-           "map"          "1"
-           "player"       "1"
-           "hero"         "1"
-           "abilities"    "1"
-           "items"        "1"
+           "buildings"     "1"
+           "provider"      "1"
+           "map"           "1"
+           "player"        "1"
+           "hero"          "1"
+           "abilities"     "1"
+           "items"         "1"
        }
    }
    ```
 
-### Step 2: Set Up GSI Server
+**Step 2: Install GSI Server**
+Choose one option:
+- **Node.js**: `npm install -g dota2-gsi-server`
+- **Python**: `pip install dota2-gsi-server`
 
-You need a local server to receive GSI data. You can use one of these options:
-
-**Option A: Simple Node.js Server**
-Create a file `gsi-server.js`:
-```javascript
-const http = require('http');
-const fs = require('fs');
-
-let latestGameState = null;
-
-const server = http.createServer((req, res) => {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    res.end();
-    return;
-  }
-
-  if (req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => body += chunk.toString());
-    req.on('end', () => {
-      try {
-        latestGameState = JSON.parse(body);
-        console.log('GSI Update:', latestGameState.map?.clock_time);
-      } catch (e) {
-        console.error('GSI Parse Error:', e);
-      }
-    });
-    res.writeHead(200);
-    res.end('OK');
-  } else if (req.method === 'GET' && req.url === '/gamestate') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(latestGameState || {}));
-  } else {
-    res.writeHead(404);
-    res.end('Not Found');
-  }
-});
-
-server.listen(3000, () => {
-  console.log('GSI Server running on http://localhost:3000');
-});
+**Step 3: Start GSI Server**
+```bash
+dota2-gsi-server --port 3000
 ```
 
-Run the server:
-```sh
-node gsi-server.js
-```
+**Step 4: Launch Dota 2**
+Start Dota 2 and enter a match. The timer app will automatically detect and sync with your game.
 
-**Option B: Use Existing GSI Tools**
-- [Dota2 GSI](https://github.com/antonpup/Dota2GSI) (C#)
-- [dota2-gsi-events](https://github.com/dotabod/dota2-gsi-events) (Node.js)
+## Usage
 
-### Step 3: Launch Dota 2
+### Timer Controls
+- **Manual Start**: Click any timer to start it manually
+- **Auto Sync**: Use "Sync" button when GSI is connected to sync with game time
+- **Pause/Resume**: Control all timers simultaneously
+- **Reset**: Clear all active timers
 
-1. Start your GSI server
-2. Launch Dota 2
-3. Enter a match (GSI only works during active games)
-4. In Sentinel Timer, click the "GSI" button to connect
-5. Click "Sync" to synchronize with game time
+### Keyboard Shortcuts
+- `Ctrl+R`: Start Roshan timer
+- `Ctrl+B`: Start Bounty Rune timer
+- `Ctrl+P`: Start Power Rune timer
+- `Ctrl+L`: Start Lotus timer
+- `Ctrl+N`: Start Neutral Pull timer
+- `Ctrl+Space`: Pause/Resume all timers
 
-## Keyboard Shortcuts
+### Configuration
+- **Side**: Switch between Radiant/Dire
+- **Lane**: Configure for Safe/Mid/Off lane
+- **Game Mode**: Toggle between All Pick and Turbo (affects timer durations)
+- **Test Mode**: Enable to test audio alerts and features
 
-- `Ctrl + R`: Start Roshan timer
-- `Ctrl + B`: Start Bounty Rune timer
-- `Ctrl + P`: Start Power Rune timer
-- `Ctrl + L`: Start Lotus timer
-- `Ctrl + N`: Start Neutral Pull timer
-- `Ctrl + Space`: Pause/Resume all timers
+## Timer Details
 
-## Audio Configuration
+### Roshan Timer
+- **Duration**: 11 minutes maximum, 8 minutes minimum
+- **Alert**: Notification at 8 minutes (earliest respawn)
+- **Final Alert**: When timer reaches 0 (latest respawn)
 
-1. Enable **Test Mode** to access the Audio Bank
-2. Choose from built-in Dota 2-themed sounds or upload custom audio
-3. Configure which sounds play for each timer type
-4. Test alerts using the play buttons
+### Rune Timers
+- **Bounty Runes**: Every 5 minutes
+- **Power Runes**: Every 2 minutes
+- **Lotus**: Every 3 minutes
 
-## Troubleshooting
+### Neutral Pulls
+- **Duration**: 1 minute
+- **Purpose**: Track neutral camp pull timings
 
-### GSI Not Connecting
-- Ensure your GSI config file is in the correct directory
-- Verify your GSI server is running on port 3000
-- Check that Dota 2 is running and you're in an active match
-- GSI only works during live games, not in menus
+## GSI Troubleshooting
 
-### Audio Not Playing
-- Check browser permissions for audio playback
-- Ensure audio files are properly uploaded in Test Mode
-- Verify volume settings in browser and system
+### Connection Issues
+1. **Check GSI Server**: Ensure server is running on localhost:3000
+2. **Verify Config**: Confirm GSI config file is in correct Dota 2 folder
+3. **Active Match**: GSI only works during live matches, not in menu
+4. **Firewall**: Ensure localhost:3000 is not blocked
 
-### Timer Sync Issues
-- Use the "Sync" button when entering a new game
-- Manual timers work independently of GSI
-- Check console for GSI connection errors
+### Common Error Messages
+- **"GSI Connecting..."**: Server not found - start GSI server
+- **"Setup Required"**: GSI config file missing or invalid
+- **"No Game Data"**: Not in an active match or GSI not configured
 
-## Project Technologies
-
-- **Frontend**: React + TypeScript + Vite
-- **UI Components**: shadcn/ui + Tailwind CSS
-- **Audio**: Web Audio API + Custom uploads
-- **Integration**: Dota 2 Game State Integration
+### Manual Sync Alternative
+If GSI isn't working, you can still use manual timer controls:
+1. Start timers manually when events occur in-game
+2. Use keyboard shortcuts for quick access
+3. Monitor timer alerts for accurate tracking
 
 ## Development
 
-### Project Structure
+### Prerequisites
+- Node.js 18+ 
+- npm or bun
+
+### Setup
+```bash
+# Clone repository
+git clone [repository-url]
+cd sentinel-timer
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# For Electron development
+npm run electron:dev
 ```
-src/
-├── components/          # React components
-│   ├── ui/             # shadcn/ui components
-│   ├── TimerManager.tsx # Main timer interface
-│   ├── TimerCard.tsx   # Individual timer component
-│   └── AudioBank.tsx   # Audio configuration
-├── hooks/              # Custom React hooks
-│   ├── useGameStateIntegration.ts # GSI connection
-│   └── useAudioBank.ts # Audio management
-└── pages/              # Route pages
-    └── Index.tsx       # Main page
+
+### Building
+```bash
+# Build web version
+npm run build
+
+# Build desktop app
+npm run electron:build
 ```
 
-### Adding New Timers
-1. Update `DEFAULT_TIMERS` in `TimerManager.tsx`
-2. Add keyboard shortcut in the event handler
-3. Include audio configuration if needed
+## Technical Details
 
-## Deployment
+### Architecture
+- **Frontend**: React + TypeScript + Vite
+- **Styling**: Tailwind CSS with custom Dota 2 theme
+- **Desktop**: Electron with automatic GSI server management
+- **GSI Integration**: HTTP polling for game state synchronization
 
-Deploy your Sentinel Timer:
+### Timer Precision
+- **Update Frequency**: 1 second intervals
+- **Sync Accuracy**: ±1 second with game time
+- **Alert Timing**: Precise to game events
 
-1. **Via Lovable**: Open your [Lovable Project](https://lovable.dev/projects/cd850d95-c83d-43ac-9bdd-fffbab4f3fae) and click Share → Publish
-2. **Custom Domain**: Navigate to Project → Settings → Domains to connect your domain
-3. **Manual Deployment**: Build with `npm run build` and deploy the `dist` folder
+### Cross-Platform
+- **Windows**: Full desktop app support
+- **macOS**: Full desktop app support  
+- **Linux**: Desktop app and web version
+- **Web**: All modern browsers supported
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test with Dota 2 GSI
+4. Add tests if applicable
 5. Submit a pull request
 
 ## License
 
-Open source - feel free to modify and distribute.
+MIT License - see LICENSE file for details
+
+## Support
+
+For issues, feature requests, or questions:
+- Create an issue on GitHub
+- Check existing documentation
+- Review troubleshooting guide above
 
 ---
 
-*Note: This application is not affiliated with Valve Corporation or Dota 2. GSI is an official Valve API for external applications.*
+**Pro Tip**: Use the desktop version for the best experience - it automatically handles all GSI setup and provides the most reliable timer synchronization!
