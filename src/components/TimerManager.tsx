@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TimerCard, type Timer } from './TimerCard';
 import { AudioBank } from './AudioBank';
+import { GSIInstallWizard } from './GSIInstallWizard';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, RotateCcw, Settings, TestTube, Wifi, WifiOff } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings, TestTube, Wifi, WifiOff, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGameStateIntegration } from '@/hooks/useGameStateIntegration';
 
@@ -62,7 +63,9 @@ export const TimerManager = () => {
   const [testMode, setTestMode] = useState(false);
   const [side, setSide] = useState<'radiant' | 'dire'>('radiant');
   const [lane, setLane] = useState<'safe' | 'mid' | 'off'>('safe');
+  const [gameMode, setGameMode] = useState<'allpick' | 'turbo'>('allpick');
   const [gameTimeOffset, setGameTimeOffset] = useState<number>(0); // Offset between game time and local time
+  const [showInstallWizard, setShowInstallWizard] = useState(false);
   const { toast } = useToast();
   const { gameState, connectionStatus, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = useGameStateIntegration();
 
@@ -334,6 +337,13 @@ export const TimerManager = () => {
               {lane === 'off' && '🛡️ Off Lane'}
             </Button>
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGameMode(gameMode === 'allpick' ? 'turbo' : 'allpick')}
+            >
+              {gameMode === 'allpick' ? '⚡ All Pick' : '🚀 Turbo'}
+            </Button>
+            <Button
               variant={isConnected ? "default" : connectionStatus === 'error' ? "destructive" : "outline"}
               size="sm"
               onClick={toggleGSIConnection}
@@ -358,6 +368,14 @@ export const TimerManager = () => {
             >
               <TestTube className="h-4 w-4 mr-1" />
               Test
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInstallWizard(true)}
+            >
+              <HelpCircle className="h-4 w-4 mr-1" />
+              Setup
             </Button>
           </div>
         </div>
@@ -425,6 +443,9 @@ export const TimerManager = () => {
           </div>
         </div>
       </Card>
+
+      {/* Install Wizard */}
+      <GSIInstallWizard open={showInstallWizard} onOpenChange={setShowInstallWizard} />
 
       {/* Audio Bank - Only visible in test mode */}
       {testMode && <AudioBank />}
