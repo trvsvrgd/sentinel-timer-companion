@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { TimerCard, type Timer } from './TimerCard';
 import { AudioBank } from './AudioBank';
 import { GSIInstallWizard } from './GSIInstallWizard';
+import { TimingConfiguration } from './TimingConfiguration';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +68,7 @@ export const TimerManager = () => {
   const [gameMode, setGameMode] = useState<'allpick' | 'turbo'>('allpick');
   const [gameTimeOffset, setGameTimeOffset] = useState<number>(0); // Offset between game time and local time
   const [showInstallWizard, setShowInstallWizard] = useState(false);
+  const [showTimingConfig, setShowTimingConfig] = useState(false);
   const { toast } = useToast();
   
   // Use Electron GSI if available, fallback to web GSI
@@ -386,6 +388,14 @@ export const TimerManager = () => {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setShowTimingConfig(true)}
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Timings
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowInstallWizard(true)}
             >
               <HelpCircle className="h-4 w-4 mr-1" />
@@ -460,6 +470,13 @@ export const TimerManager = () => {
 
       {/* Install Wizard */}
       <GSIInstallWizard open={showInstallWizard} onOpenChange={setShowInstallWizard} />
+      
+      {/* Timing Configuration */}
+      <TimingConfiguration 
+        open={showTimingConfig} 
+        onOpenChange={setShowTimingConfig}
+        gameTime={gameState?.game_time || 0}
+      />
 
       {/* Audio Bank - Only visible in test mode */}
       {testMode && <AudioBank />}

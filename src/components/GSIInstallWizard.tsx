@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Circle, Copy, ExternalLink, FolderOpen, FileText, Server, Gamepad2 } from 'lucide-react';
+import { CheckCircle, Circle, Copy, ExternalLink, FolderOpen, FileText, Server, Gamepad2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useGSIValidation } from '@/hooks/useGSIValidation';
 
 interface GSIInstallWizardProps {
   open: boolean;
@@ -55,6 +56,7 @@ export const GSIInstallWizard: React.FC<GSIInstallWizardProps> = ({ open, onOpen
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const { toast } = useToast();
+  const { configFileExists, serverRunning, gameConnected, runValidation, isStepComplete } = useGSIValidation();
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -81,7 +83,8 @@ export const GSIInstallWizard: React.FC<GSIInstallWizardProps> = ({ open, onOpen
 
   const getStepIcon = (stepId: number) => {
     const IconComponent = steps.find(s => s.id === stepId)?.icon || Circle;
-    return completedSteps.includes(stepId) ? 
+    const isComplete = isStepComplete(stepId);
+    return isComplete ? 
       <CheckCircle className="h-5 w-5 text-green-500" /> : 
       <IconComponent className="h-5 w-5 text-muted-foreground" />;
   };
@@ -148,11 +151,43 @@ export const GSIInstallWizard: React.FC<GSIInstallWizardProps> = ({ open, onOpen
               </div>
             </div>
 
+            {/* Live validation status */}
+            <Card className="p-3 mt-4 bg-muted/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isStepComplete(1) ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isStepComplete(1) ? 'Config file detected' : 'Waiting for config file...'}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={runValidation}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isStepComplete(1) 
+                  ? 'GSI configuration is working properly'
+                  : 'Create the config file and save it to enable GSI data transmission'
+                }
+              </p>
+            </Card>
+
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => { markStepComplete(1); setCurrentStep(2); }}>
+              <Button 
+                onClick={() => { markStepComplete(1); setCurrentStep(2); }}
+                disabled={!isStepComplete(1)}
+              >
                 Next Step
               </Button>
             </div>
@@ -231,11 +266,43 @@ export const GSIInstallWizard: React.FC<GSIInstallWizardProps> = ({ open, onOpen
               </div>
             </div>
 
+            {/* Live validation status */}
+            <Card className="p-3 mt-4 bg-muted/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isStepComplete(2) ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isStepComplete(2) ? 'GSI server is running' : 'GSI server not detected'}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={runValidation}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isStepComplete(2) 
+                  ? 'Server is listening on localhost:3000'
+                  : 'Start the GSI server to receive game data'
+                }
+              </p>
+            </Card>
+
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => setCurrentStep(1)}>
                 Previous
               </Button>
-              <Button onClick={() => { markStepComplete(2); setCurrentStep(3); }}>
+              <Button 
+                onClick={() => { markStepComplete(2); setCurrentStep(3); }}
+                disabled={!isStepComplete(2)}
+              >
                 Next Step
               </Button>
             </div>
@@ -288,11 +355,43 @@ export const GSIInstallWizard: React.FC<GSIInstallWizardProps> = ({ open, onOpen
               </div>
             </div>
 
+            {/* Live validation status */}
+            <Card className="p-3 mt-4 bg-muted/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isStepComplete(3) ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {isStepComplete(3) ? 'Game connected successfully' : 'Waiting for game connection...'}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={runValidation}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isStepComplete(3) 
+                  ? 'Receiving live game data from Dota 2'
+                  : 'Launch Dota 2 and enter a match to establish connection'
+                }
+              </p>
+            </Card>
+
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => setCurrentStep(2)}>
                 Previous
               </Button>
-              <Button onClick={() => { markStepComplete(3); onOpenChange(false); }}>
+              <Button 
+                onClick={() => { markStepComplete(3); onOpenChange(false); }}
+                disabled={!isStepComplete(3)}
+              >
                 Complete Setup
               </Button>
             </div>
