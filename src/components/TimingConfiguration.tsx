@@ -106,10 +106,9 @@ export const TimingConfiguration: React.FC<TimingConfigurationProps> = ({
         </DialogHeader>
 
         <Tabs defaultValue="timings" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="timings">Event Timings</TabsTrigger>
             <TabsTrigger value="presets">Presets</TabsTrigger>
-            <TabsTrigger value="preview">Live Preview</TabsTrigger>
           </TabsList>
 
           <TabsContent value="timings" className="space-y-4">
@@ -293,49 +292,6 @@ export const TimingConfiguration: React.FC<TimingConfigurationProps> = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="preview" className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">Live Event Preview</h3>
-              <p className="text-sm text-muted-foreground">
-                See when upcoming events will occur based on current game time and settings.
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              {upcomingEvents.slice(0, 8).map(event => (
-                <Card key={event.id} className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span className="font-medium">{event.name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {formatTime(event.effectiveTime)}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{event.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono text-sm">
-                        {formatGameTime(event.nextEventTime)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        in {formatTime(Math.max(0, event.timeUntilNext))}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            {gameTime === 0 && (
-              <Card className="p-4 bg-muted/50">
-                <p className="text-sm text-muted-foreground text-center">
-                  Connect to a live game to see real-time event predictions
-                </p>
-              </Card>
-            )}
-          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end pt-4 border-t">

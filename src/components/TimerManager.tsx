@@ -3,6 +3,7 @@ import { TimerCard, type Timer } from './TimerCard';
 import { AudioBank } from './AudioBank';
 import { GSIInstallWizard } from './GSIInstallWizard';
 import { TimingConfiguration } from './TimingConfiguration';
+import { GameSettings } from './GameSettings';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -332,34 +333,6 @@ export const TimerManager = () => {
           
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSide(side === 'radiant' ? 'dire' : 'radiant')}
-            >
-              {side === 'radiant' ? '🌞 Radiant' : '🌙 Dire'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const lanes: Array<'safe' | 'mid' | 'off'> = ['safe', 'mid', 'off'];
-                const currentIndex = lanes.indexOf(lane);
-                const nextIndex = (currentIndex + 1) % lanes.length;
-                setLane(lanes[nextIndex]);
-              }}
-            >
-              {lane === 'safe' && '⚔️ Safe Lane'}
-              {lane === 'mid' && '🎯 Mid Lane'}
-              {lane === 'off' && '🛡️ Off Lane'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setGameMode(gameMode === 'allpick' ? 'turbo' : 'allpick')}
-            >
-              {gameMode === 'allpick' ? '⚡ All Pick' : '🚀 Turbo'}
-            </Button>
-            <Button
               variant={isConnected ? "default" : connectionStatus === 'error' ? "destructive" : "outline"}
               size="sm"
               onClick={toggleGSIConnection}
@@ -481,8 +454,21 @@ export const TimerManager = () => {
       {/* Audio Bank - Only visible in test mode */}
       {testMode && <AudioBank />}
 
-      {/* Timer Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Game Settings Panel */}
+        <div className="lg:col-span-1">
+          <GameSettings
+            side={side}
+            lane={lane}
+            gameMode={gameMode}
+            onSideChange={setSide}
+            onLaneChange={setLane}
+            onGameModeChange={setGameMode}
+          />
+        </div>
+
+        {/* Timer Grid */}
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {DEFAULT_TIMERS.map(timer => {
           const activeTimer = activeTimers[timer.id];
           return (
@@ -498,7 +484,8 @@ export const TimerManager = () => {
               className="animate-fade-in-up"
             />
           );
-        })}
+          })}
+        </div>
       </div>
     </div>
   );

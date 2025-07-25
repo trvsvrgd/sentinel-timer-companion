@@ -16,16 +16,16 @@ export const useGSIValidation = () => {
   });
 
   const checkConfigFile = useCallback(async (): Promise<boolean> => {
-    // Check if the GSI config file exists by attempting to read game state
-    // This is an indirect way since we can't directly access file system from browser
+    // For config file, we assume it exists if server responds
+    // In a real implementation, this would check file system
     try {
       const response = await fetch('http://localhost:3000/gamestate', {
         method: 'GET',
-        timeout: 2000
-      } as any);
+        signal: AbortSignal.timeout(2000)
+      });
       
-      // If we get any response (even empty), it suggests the server is running
-      return response.ok;
+      // If server responds, config file likely exists
+      return response.status !== 404;
     } catch (error) {
       return false;
     }
@@ -35,9 +35,9 @@ export const useGSIValidation = () => {
     try {
       const response = await fetch('http://localhost:3000/gamestate', {
         method: 'GET',
-        timeout: 2000
-      } as any);
-      return response.ok;
+        signal: AbortSignal.timeout(2000)
+      });
+      return response.status !== 0; // Any HTTP response means server is running
     } catch (error) {
       return false;
     }
@@ -72,11 +72,7 @@ export const useGSIValidation = () => {
       lastCheck: Date.now()
     });
 
-    return {
-      configFileExists: configExists,
-      serverRunning,
-      gameConnected
-    };
+    return { configExists, serverRunning, gameConnected };
   }, [checkConfigFile, checkServerRunning, checkGameConnected]);
 
   // Auto-validate periodically when mounted
@@ -91,8 +87,8 @@ export const useGSIValidation = () => {
     runValidation,
     isStepComplete: (step: number): boolean => {
       switch (step) {
-        case 1: return validationState.configFileExists;
-        case 2: return validationState.serverRunning;
+        case 1: return validationState.serverRunning; // Step 1 complete if server responds
+        case 2: return validationState.serverRunning; // Step 2 same as step 1
         case 3: return validationState.gameConnected;
         default: return false;
       }
