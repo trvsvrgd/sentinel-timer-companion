@@ -97,6 +97,24 @@ All colors MUST be HSL.
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --pulse-glow: 0 0 30px hsl(var(--primary) / 0.6);
+    
+    /* Magical effects */
+    --magic-shimmer: linear-gradient(45deg, 
+      transparent 30%, 
+      hsl(var(--primary) / 0.1) 40%, 
+      hsl(var(--accent) / 0.1) 50%, 
+      hsl(var(--primary) / 0.1) 60%, 
+      transparent 70%);
+    --rune-energy: radial-gradient(circle at center, 
+      hsl(var(--rune) / 0.3) 0%, 
+      hsl(var(--rune-glow) / 0.2) 30%, 
+      transparent 70%);
+    --battle-aura: conic-gradient(from 0deg, 
+      hsl(var(--primary) / 0.2), 
+      hsl(var(--accent) / 0.15), 
+      hsl(var(--roshan) / 0.1), 
+      hsl(var(--neutral) / 0.15), 
+      hsl(var(--primary) / 0.2));
   }
 }
 
@@ -148,6 +166,60 @@ All colors MUST be HSL.
     z-index: -1;
     animation: rune-rotate 3s linear infinite;
   }
+  
+  .mystical-border {
+    position: relative;
+    border: 1px solid hsl(var(--border));
+  }
+  
+  .mystical-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: var(--magic-shimmer);
+    border-radius: inherit;
+    z-index: -1;
+    animation: shimmer-sweep 3s ease-in-out infinite;
+  }
+  
+  .battle-glow {
+    box-shadow: 
+      0 0 20px hsl(var(--primary) / 0.4),
+      0 0 40px hsl(var(--accent) / 0.2),
+      inset 0 0 20px hsl(var(--primary) / 0.1);
+    transition: var(--transition-smooth);
+  }
+  
+  .battle-glow:hover {
+    box-shadow: 
+      0 0 30px hsl(var(--primary) / 0.6),
+      0 0 60px hsl(var(--accent) / 0.3),
+      inset 0 0 30px hsl(var(--primary) / 0.15);
+  }
+  
+  .enchanted-text {
+    background: linear-gradient(135deg, 
+      hsl(var(--foreground)), 
+      hsl(var(--primary)), 
+      hsl(var(--accent)));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 200%;
+    animation: text-shimmer 4s ease-in-out infinite;
+  }
+  
+  .magical-card {
+    background: radial-gradient(ellipse at top left, 
+      hsl(var(--card)) 0%, 
+      hsl(var(--card) / 0.95) 50%, 
+      hsl(var(--card) / 0.9) 100%);
+    backdrop-filter: blur(10px);
+    border-image: linear-gradient(45deg, 
+      hsl(var(--border)), 
+      hsl(var(--primary) / 0.5), 
+      hsl(var(--border))) 1;
+  }
 }
 
 @keyframes battlefield-shimmer {
@@ -163,4 +235,31 @@ All colors MUST be HSL.
 @keyframes rune-rotate {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes shimmer-sweep {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes text-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes mystical-pulse {
+  0%, 100% { 
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes arcane-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-10px) rotate(2deg); }
+  66% { transform: translateY(-5px) rotate(-1deg); }
 }

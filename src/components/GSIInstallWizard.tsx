@@ -405,11 +405,11 @@ export const GSIInstallWizard: React.FC<GSIInstallWizardProps> = ({ open, onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto magical-card mystical-border">
         <DialogHeader>
-          <DialogTitle>GSI Setup Wizard</DialogTitle>
+          <DialogTitle className="enchanted-text">🔮 Arcane Setup Wizard 🔮</DialogTitle>
           <DialogDescription>
-            Set up Game State Integration to sync timers with your Dota 2 match
+            Forge the mystical connection between the Ancient and your battle companion
           </DialogDescription>
         </DialogHeader>
 

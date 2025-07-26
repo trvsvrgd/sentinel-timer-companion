@@ -27,8 +27,8 @@ export const GameSettings: React.FC<GameSettingsProps> = ({
   };
 
   return (
-    <Card className="p-4">
-      <h3 className="font-semibold mb-3">Game Settings</h3>
+    <Card className="p-4 magical-card mystical-border battle-glow">
+      <h3 className="font-semibold mb-3 enchanted-text">⚡ Battle Configuration ⚡</h3>
       <div className="space-y-3">
         <div>
           <label className="text-sm font-medium text-muted-foreground">Team</label>

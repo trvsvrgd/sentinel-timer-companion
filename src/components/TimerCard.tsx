@@ -91,13 +91,14 @@ export const TimerCard = ({
 
   return (
     <Card className={cn(
-      "relative overflow-hidden transition-all duration-300",
-      "bg-gradient-timer border-timer-border shadow-card",
-      "hover:shadow-glow hover:border-primary/50",
+      "relative overflow-hidden transition-all duration-300 magical-card",
+      "bg-gradient-timer border-timer-border shadow-card mystical-border",
+      "hover:shadow-glow hover:border-primary/50 battle-glow",
       timer.type === 'rune' && "rune-mystical",
       timer.type === 'roshan' && isActive && "ancient-glow",
+      timer.type === 'neutral' && "hover:animate-mystical-pulse",
       isActive && "animate-glow-pulse",
-      isAlertState && "border-accent bg-gradient-accent ancient-glow",
+      isAlertState && "border-accent bg-gradient-accent ancient-glow animate-arcane-float",
       className
     )}>
       {/* Progress bar */}
@@ -118,7 +119,7 @@ export const TimerCard = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className={cn(
-            "font-semibold text-lg",
+            "font-semibold text-lg enchanted-text",
             isAlertState && "text-accent animate-timer-pulse"
           )}>
             {timer.name}

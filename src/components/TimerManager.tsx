@@ -317,10 +317,10 @@ export const TimerManager = () => {
   return (
     <div className="space-y-4 dota-bg-pattern">
       {/* Header Controls */}
-      <Card className="p-4 bg-gradient-ancient border-timer-border ancient-glow">
+      <Card className="p-4 bg-gradient-ancient border-timer-border ancient-glow magical-card mystical-border">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-primary">Sentinel Timer</h1>
+            <h1 className="text-2xl font-bold text-primary enchanted-text">⚔️ Sentinel Timer ⚔️</h1>
             <Badge variant={testMode ? "destructive" : "secondary"}>
               {testMode ? "TEST MODE" : "LIVE"}
             </Badge>
