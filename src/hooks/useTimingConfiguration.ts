@@ -74,6 +74,13 @@ const DEFAULT_TIMING_EVENTS: TimingEvent[] = [
     defaultTime: 85, // 1 minute 25 seconds
     description: 'Sentry ward stock replenishment',
     category: 'periodic'
+  },
+  {
+    id: 'wisdom-shrine',
+    name: 'Wisdom Shrine',
+    defaultTime: 420, // 7 minutes
+    description: 'Wisdom shrine activation availability',
+    category: 'periodic'
   }
 ];
 

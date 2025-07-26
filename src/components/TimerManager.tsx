@@ -57,6 +57,13 @@ const DEFAULT_TIMERS: Timer[] = [
     duration: 60, // 1 minute
     type: 'neutral',
     audioAlert: true
+  },
+  {
+    id: 'wisdom-shrine',
+    name: 'Wisdom Shrine',
+    duration: 420, // 7 minutes
+    type: 'neutral',
+    audioAlert: true
   }
 ];
 
