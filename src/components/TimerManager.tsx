@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Play, Pause, RotateCcw, Settings, TestTube, Wifi, WifiOff, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useElectronGSI } from '@/hooks/useElectronGSI';
-import { useGameStateIntegration } from '@/hooks/useGameStateIntegration';
+import { useAudioBank } from '@/hooks/useAudioBank';
+import type { NotificationEvent } from '@/hooks/useAudioBank';
 
 interface ActiveTimer {
   id: string;
@@ -79,6 +80,8 @@ export const TimerManager = () => {
   const [showTimingConfig, setShowTimingConfig] = useState(false);
   const { toast } = useToast();
   
+  const { playEvent } = useAudioBank();
+  
   // Use Electron GSI if available, fallback to web GSI
   const electronGSI = useElectronGSI();
   const webGSI = useGameStateIntegration();
@@ -117,7 +120,7 @@ export const TimerManager = () => {
                     description: "Roshan can now spawn (minimum time reached)",
                     variant: "default"
                   });
-                  playAlert();
+                  playEvent('roshan-spawn');
                 }
               }
             }
@@ -163,9 +166,18 @@ export const TimerManager = () => {
     });
     
     if (timer.audioAlert) {
-      playAlert();
+      const mapping: Record<string, NotificationEvent> = {
+        'roshan': 'roshan-spawn',
+        'bounty-rune': 'rune-spawn',
+        'power-rune': 'rune-spawn',
+        'lotus': 'lotus-bloom',
+        'neutral-pull': 'neutral-ready',
+        'wisdom-shrine': 'wisdom-available'
+      };
+      const evt = mapping[timer.id] || 'timer-alert';
+      playEvent(evt);
     }
-  }, [toast, playAlert]);
+  }, [toast, playEvent]);
 
   const startTimer = useCallback((id: string) => {
     const timer = DEFAULT_TIMERS.find(t => t.id === id);

@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+
+export type NotificationEvent = 'roshan-spawn' | 'roshan-death' | 'rune-spawn' | 'lotus-bloom' | 'neutral-ready' | 'wisdom-available' | 'timer-alert';
 
 export interface AudioFile {
   id: string;
@@ -7,6 +9,8 @@ export interface AudioFile {
   description: string;
   url?: string; // For uploaded files
   isBuiltIn?: boolean;
+  hero?: string; // Hero name this audio is for (e.g., "Anti-Mage"), or 'Any'
+  event?: NotificationEvent; // Which event this audio pertains to
 }
 
 const BUILT_IN_SOUNDS: AudioFile[] = [
@@ -57,6 +61,36 @@ const BUILT_IN_SOUNDS: AudioFile[] = [
 export const useAudioBank = () => {
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>(BUILT_IN_SOUNDS);
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
+  const [selectedHero, setSelectedHero] = useState<string>('Any');
+  const [lastPlayedByEvent, setLastPlayedByEvent] = useState<Record<string, string | null>>({});
+
+  // Load custom audio and hero selection from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('customAudioFiles');
+      if (stored) {
+        const custom: AudioFile[] = JSON.parse(stored);
+        setAudioFiles([...BUILT_IN_SOUNDS, ...custom]);
+      }
+      const storedHero = localStorage.getItem('selectedHero');
+      if (storedHero) setSelectedHero(storedHero);
+    } catch {}
+  }, []);
+
+  // Persist custom audio files to localStorage (only custom, not built-ins)
+  useEffect(() => {
+    try {
+      const custom = audioFiles.filter(f => !f.isBuiltIn);
+      localStorage.setItem('customAudioFiles', JSON.stringify(custom));
+    } catch {}
+  }, [audioFiles]);
+
+  // Persist selected hero
+  useEffect(() => {
+    try {
+      localStorage.setItem('selectedHero', selectedHero);
+    } catch {}
+  }, [selectedHero]);
 
   const playAudio = useCallback(async (audioId: string) => {
     const audioFile = audioFiles.find(f => f.id === audioId);
@@ -110,6 +144,33 @@ export const useAudioBank = () => {
     }
   }, []);
 
+  const playEvent = useCallback(async (eventId: NotificationEvent, opts?: { hero?: string }) => {
+    const desiredHero = (opts?.hero ?? selectedHero).toLowerCase();
+    const candidatesExact = audioFiles.filter(f => f.event === eventId && f.url && f.hero && f.hero.toLowerCase() === desiredHero);
+    const candidatesAny = audioFiles.filter(f => f.event === eventId && f.url && (!f.hero || f.hero.toLowerCase() === 'any'));
+    const candidates = candidatesExact.length > 0 ? candidatesExact : candidatesAny;
+
+    let chosen: AudioFile | undefined;
+    if (candidates.length > 0) {
+      const lastId = lastPlayedByEvent[eventId] ?? null;
+      const pool = candidates.filter(c => c.id !== lastId);
+      const arr = pool.length > 0 ? pool : candidates;
+      chosen = arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    if (chosen) {
+      await playAudio(chosen.id);
+      setLastPlayedByEvent(prev => ({ ...prev, [eventId]: chosen!.id }));
+      return;
+    }
+
+    try {
+      await playBuiltInSound(eventId);
+    } catch {
+      await playBuiltInSound('timer-alert');
+    }
+  }, [audioFiles, selectedHero, lastPlayedByEvent, playAudio, playBuiltInSound]);
+
   const playComplexTone = async (
     audioContext: AudioContext, 
     frequencies: number[], 
@@ -144,15 +205,17 @@ export const useAudioBank = () => {
     });
   };
 
-  const addCustomAudio = useCallback((file: File) => {
+  const addCustomAudio = useCallback((file: File, meta?: { hero?: string; event?: NotificationEvent }) => {
     const url = URL.createObjectURL(file);
     const newAudio: AudioFile = {
       id: `custom-${Date.now()}`,
       name: file.name.replace(/\.[^/.]+$/, ""),
       category: 'general',
-      description: 'Custom uploaded sound',
+      description: `Custom uploaded sound${meta?.event ? ` for ${meta.event}` : ''}${meta?.hero ? ` (${meta.hero})` : ''}`,
       url: url,
-      isBuiltIn: false
+      isBuiltIn: false,
+      hero: meta?.hero || 'Any',
+      event: meta?.event
     };
     
     setAudioFiles(prev => [...prev, newAudio]);
@@ -178,7 +241,10 @@ export const useAudioBank = () => {
   return {
     audioFiles,
     isPlaying,
+    selectedHero,
+    setSelectedHero,
     playAudio,
+    playEvent,
     addCustomAudio,
     removeCustomAudio,
     updateAudioConfig
