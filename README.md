@@ -129,33 +129,45 @@ If GSI isn't working, you can still use manual timer controls:
 ## Development
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or bun
+- **Node.js 20+** (required)
+- **npm** (comes with Node.js)
 
-### Setup
+### Setup (Fresh Clone)
+When you clone this repository on any computer, follow these steps:
+
 ```bash
-# Clone repository
+# 1. Clone the repository
 git clone [repository-url]
-cd sentinel-timer
+cd sentinel-timer-companion
 
-# Install dependencies
+# 2. Install dependencies (REQUIRED - do this first!)
 npm install
 
-# Start development server
+# 3. Start development server
 npm run dev
 
-# For Electron development
+# OR for Electron development
 npm run electron:dev
 ```
 
+**Important**: You must run `npm install` after cloning. This installs all dependencies including `vite`, `electron`, and other required packages. The `package-lock.json` file ensures you get the exact same dependency versions on any computer.
+
 ### Building
 ```bash
+# Make sure dependencies are installed first!
+npm install
+
 # Build web version
 npm run build
 
-# Build desktop app
-npm run electron:build
+# Build desktop app (platform-specific)
+npm run electron:build        # Current platform
+npm run electron:build:win     # Windows
+npm run electron:build:mac     # macOS
+npm run electron:build:linux   # Linux
 ```
+
+**Note**: The GitHub CI automatically builds and tests on every push. If CI passes, you can be confident the code will work on any fresh clone.
 
 ## Technical Details
 
