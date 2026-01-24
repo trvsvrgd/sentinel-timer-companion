@@ -1,20 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
-
-export interface GameState {
-  clock_time: number;
-  game_time: number;
-  paused: boolean;
-  game_state: string;
-  winner: number;
-}
-
-export type GSIConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { GameState, GSIConnectionStatus, RawGSIData } from '@/types/gsi';
+import { validateAndSanitizeGSIData } from '@/utils/validation';
+import { retryWithBackoff } from '@/utils/retry';
+import { logger } from '@/utils/logger';
+import { healthMonitor } from '@/utils/healthMonitor';
 
 declare global {
   interface Window {
     electronAPI?: {
       getGSIStatus: () => Promise<{ isRunning: boolean; port: number }>;
       restartGSIServer: () => Promise<{ success: boolean; error?: string }>;
+      onGameStateUpdate: (callback: (data: RawGSIData) => void) => () => void;
+      checkForUpdates?: () => Promise<{ success: boolean; message?: string; error?: string }>;
+      downloadUpdate?: () => Promise<{ success: boolean; error?: string }>;
+      installUpdate?: () => Promise<{ success: boolean; error?: string }>;
+      onUpdateStatus?: (callback: (data: unknown) => void) => () => void;
+      onUpdateProgress?: (callback: (data: unknown) => void) => () => void;
     };
   }
 }
@@ -25,40 +26,44 @@ export const useElectronGSI = () => {
   const [error, setError] = useState<string | null>(null);
   const [isElectron] = useState(() => typeof window !== 'undefined' && !!window.electronAPI);
 
-  const pollGameState = useCallback(async () => {
-    if (!isElectron) return;
+  const cleanupRef = useRef<(() => void) | null>(null);
 
+  // Process game state data from IPC with validation
+  const processGameState = useCallback((data: unknown) => {
     try {
-      const response = await fetch('http://localhost:3000/gamestate');
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data && Object.keys(data).length > 0) {
-          // Extract relevant game state information
-          const newGameState: GameState = {
-            clock_time: data.map?.clock_time || data.clock_time || 0,
-            game_time: data.map?.game_time || data.game_time || data.map?.clock_time || data.clock_time || 0,
-            paused: data.map?.paused || data.paused || false,
-            game_state: data.map?.game_state || data.game_state || 'DOTA_GAMERULES_STATE_INIT',
-            winner: data.map?.winner || data.winner || 0
-          };
-          
-          setGameState(newGameState);
-          setConnectionStatus('connected');
-          setError(null);
-        } else {
-          // Empty response means no active game
-          setGameState(null);
-          setConnectionStatus('connected'); // Server is running but no game data
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}`);
+      // Validate and sanitize incoming data
+      const sanitized = validateAndSanitizeGSIData(data);
+      
+      if (!sanitized || Object.keys(sanitized).length === 0) {
+        // Empty response means no active game
+        setGameState(null);
+        setConnectionStatus('connected'); // Server is running but no game data
+        return;
       }
+
+      // Extract relevant game state information with proper type handling
+      const rawState = sanitized.map?.game_state || sanitized.game_state;
+      const gameStateValue = (rawState && typeof rawState === 'string') 
+        ? rawState as GameState['game_state']
+        : 'DOTA_GAMERULES_STATE_INIT';
+
+      const newGameState: GameState = {
+        clock_time: sanitized.map?.clock_time ?? sanitized.clock_time ?? 0,
+        game_time: sanitized.map?.game_time ?? sanitized.game_time ?? sanitized.map?.clock_time ?? sanitized.clock_time ?? 0,
+        paused: sanitized.map?.paused ?? sanitized.paused ?? false,
+        game_state: gameStateValue,
+        winner: sanitized.map?.winner ?? sanitized.winner ?? 0
+      };
+      
+      setGameState(newGameState);
+      setConnectionStatus('connected');
+      setError(null);
     } catch (err) {
-      setConnectionStatus('error');
-      setError('GSI server not responding. Make sure Dota 2 is running.');
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Error processing game state', error, { rawData: data });
+      setError('Failed to process game state data');
     }
-  }, [isElectron]);
+  }, []);
 
   const connect = useCallback(async () => {
     if (!isElectron || !window.electronAPI) {
@@ -69,10 +74,61 @@ export const useElectronGSI = () => {
     setConnectionStatus('connecting');
     
     try {
-      const status = await window.electronAPI.getGSIStatus();
+      // Use retry logic for getting GSI status
+      const statusResult = await retryWithBackoff(
+        () => window.electronAPI!.getGSIStatus(),
+        {
+          maxRetries: 2,
+          initialDelay: 500,
+          onRetry: (attempt, error) => {
+            logger.warn(`Retrying GSI status check (attempt ${attempt})`, { error });
+          },
+        }
+      );
+
+      if (!statusResult.success || !statusResult.data) {
+        throw new Error('Failed to get GSI status');
+      }
+
+      const status = statusResult.data;
+
       if (status.isRunning) {
         setConnectionStatus('connected');
         setError(null);
+        
+        // Fetch initial game state if available (with timeout and retry)
+        const fetchResult = await retryWithBackoff(
+          async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            
+            try {
+              const response = await fetch(`http://localhost:${status.port}/gamestate`, {
+                signal: controller.signal,
+              });
+              clearTimeout(timeoutId);
+              
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+              
+              const data = await response.json();
+              return data;
+            } catch (err) {
+              clearTimeout(timeoutId);
+              throw err;
+            }
+          },
+          {
+            maxRetries: 1,
+            initialDelay: 500,
+          }
+        );
+
+        if (fetchResult.success && fetchResult.data) {
+          processGameState(fetchResult.data);
+        }
+        // Ignore fetch errors - IPC will handle updates going forward
       } else {
         const result = await window.electronAPI.restartGSIServer();
         if (result.success) {
@@ -84,12 +140,19 @@ export const useElectronGSI = () => {
         }
       }
     } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Failed to connect to GSI', error);
       setConnectionStatus('error');
       setError('Failed to communicate with GSI server');
     }
-  }, [isElectron]);
+  }, [isElectron, processGameState]);
 
   const disconnect = useCallback(() => {
+    // Clean up IPC listener
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
     setConnectionStatus('disconnected');
     setGameState(null);
     setError(null);
@@ -106,22 +169,39 @@ export const useElectronGSI = () => {
     return gameState?.game_state === 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS' || false;
   }, [gameState]);
 
-  // Auto-polling when connected
+  // Listen for IPC game state updates (only when connected or connecting)
   useEffect(() => {
-    if (!isElectron) return;
+    if (!isElectron || !window.electronAPI?.onGameStateUpdate) return;
+    if (connectionStatus === 'disconnected') return;
 
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (connectionStatus === 'connected') {
-      interval = setInterval(pollGameState, 1000);
+    // Clean up previous listener if it exists
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
     }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval);
+
+    const handler = (data: unknown) => {
+      try {
+        processGameState(data);
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        logger.error('Error in game state update handler', error, { data });
+        setError('Failed to process game state update');
       }
     };
-  }, [connectionStatus, pollGameState, isElectron]);
+
+    const cleanup = window.electronAPI.onGameStateUpdate(handler);
+    cleanupRef.current = cleanup;
+    healthMonitor.trackListener(cleanup);
+
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        healthMonitor.untrackListener(cleanup);
+        cleanupRef.current = null;
+      }
+    };
+  }, [isElectron, connectionStatus, processGameState]);
 
   // Auto-connect on startup if in Electron
   useEffect(() => {

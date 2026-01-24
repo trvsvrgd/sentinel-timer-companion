@@ -1,14 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-
-export interface GameState {
-  clock_time: number;
-  game_time: number;
-  paused: boolean;
-  game_state: 'DOTA_GAMERULES_STATE_INIT' | 'DOTA_GAMERULES_STATE_WAIT_FOR_PLAYERS_TO_LOAD' | 'DOTA_GAMERULES_STATE_HERO_SELECTION' | 'DOTA_GAMERULES_STATE_STRATEGY_TIME' | 'DOTA_GAMERULES_STATE_PRE_GAME' | 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS' | 'DOTA_GAMERULES_STATE_POST_GAME' | 'DOTA_GAMERULES_STATE_DISCONNECT';
-  winner: number;
-}
-
-export type GSIConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+import type { GameState, GSIConnectionStatus } from '@/types/gsi';
+import { validateAndSanitizeGSIData } from '@/utils/validation';
+import { retryWithBackoff } from '@/utils/retry';
+import { logger } from '@/utils/logger';
+import { createTrackedInterval, clearTrackedInterval } from '@/utils/timeout';
+import { healthMonitor } from '@/utils/healthMonitor';
 
 export const useGameStateIntegration = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -33,41 +29,77 @@ export const useGameStateIntegration = () => {
     try {
       setConnectionAttempts(prev => prev + 1);
       
-      // GSI typically writes to a local file or serves on localhost:3000
-      // This is a common GSI endpoint for Dota 2
-      const response = await fetch('http://localhost:3000/gamestate', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
+      // Use retry logic with timeout
+      const result = await retryWithBackoff(
+        async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+          
+          try {
+            const response = await fetch('http://localhost:3000/gamestate', {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+              },
+              signal: controller.signal,
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Validate and sanitize data
+            const sanitized = validateAndSanitizeGSIData(data);
+            
+            if (!sanitized || !sanitized.map || sanitized.map.clock_time === undefined) {
+              throw new Error('Invalid GSI data format');
+            }
+            
+            return sanitized;
+          } catch (err) {
+            clearTimeout(timeoutId);
+            throw err;
+          }
         },
-      });
+        {
+          maxRetries: 1,
+          initialDelay: 500,
+        }
+      );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (result.success && result.data) {
+        const data = result.data;
         
         // Extract relevant game state information
-        if (data && data.map && data.map.clock_time !== undefined) {
-          const newGameState: GameState = {
-            clock_time: data.map.clock_time,
-            game_time: data.map.game_time || data.map.clock_time,
-            paused: data.map.paused || false,
-            game_state: data.map.game_state || 'DOTA_GAMERULES_STATE_INIT',
-            winner: data.map.winner || 0
-          };
-          
-          setGameState(newGameState);
-          setConnectionStatus('connected');
-          setLastSyncTime(Date.now());
-          setError(null);
-          setConnectionAttempts(0);
-        } else {
-          throw new Error('Invalid GSI data format');
-        }
+        const rawState = data.map?.game_state || data.game_state;
+        const gameStateValue = (rawState && typeof rawState === 'string') 
+          ? rawState as GameState['game_state']
+          : 'DOTA_GAMERULES_STATE_INIT';
+
+        const newGameState: GameState = {
+          clock_time: data.map?.clock_time ?? data.clock_time ?? 0,
+          game_time: data.map?.game_time ?? data.game_time ?? data.map?.clock_time ?? data.clock_time ?? 0,
+          paused: data.map?.paused ?? data.paused ?? false,
+          game_state: gameStateValue,
+          winner: data.map?.winner ?? data.winner ?? 0
+        };
+        
+        setGameState(newGameState);
+        setConnectionStatus('connected');
+        setLastSyncTime(Date.now());
+        setError(null);
+        setConnectionAttempts(0);
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw result.error || new Error('Failed to fetch game state');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch game state';
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('Error polling game state', error);
+      const errorMessage = error.message;
       
       if (connectionAttempts >= maxRetries) {
         setConnectionStatus('error');
@@ -91,6 +123,7 @@ export const useGameStateIntegration = () => {
     setGameState(null);
     setError(null);
     setConnectionAttempts(0);
+    logger.info('GSI connection disconnected');
   }, []);
 
   const syncGameTime = useCallback((): number | null => {
@@ -111,14 +144,14 @@ export const useGameStateIntegration = () => {
     let interval: NodeJS.Timeout | null = null;
     
     if (connectionStatus === 'connected') {
-      interval = setInterval(pollGameState, 1000); // Poll every second when connected
+      interval = createTrackedInterval(pollGameState, 1000); // Poll every second when connected
     } else if (connectionStatus === 'connecting' && connectionAttempts < maxRetries) {
-      interval = setInterval(pollGameState, 2000); // Poll every 2 seconds when connecting
+      interval = createTrackedInterval(pollGameState, 2000); // Poll every 2 seconds when connecting
     }
     
     return () => {
       if (interval) {
-        clearInterval(interval);
+        clearTrackedInterval(interval);
       }
     };
   }, [connectionStatus, connectionAttempts, maxRetries, pollGameState]);

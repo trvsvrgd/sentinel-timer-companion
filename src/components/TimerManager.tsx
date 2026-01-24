@@ -10,8 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Play, Pause, RotateCcw, Settings, TestTube, Wifi, WifiOff, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useElectronGSI } from '@/hooks/useElectronGSI';
+import { useGameStateIntegration } from '@/hooks/useGameStateIntegration';
 import { useAudioBank } from '@/hooks/useAudioBank';
 import type { NotificationEvent } from '@/hooks/useAudioBank';
+import { createTrackedInterval, clearTrackedInterval } from '@/utils/timeout';
+import { logger } from '@/utils/logger';
+import { UpdateManager } from './UpdateManager';
 
 interface ActiveTimer {
   id: string;
@@ -88,75 +92,56 @@ export const TimerManager = () => {
   const { gameState, connectionStatus, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = 
     electronGSI.isElectron ? electronGSI : webGSI;
 
-  // Update timers every second
+  // Update timers every second with tracked interval
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = createTrackedInterval(() => {
       if (isPaused) return;
 
-      setActiveTimers(prev => {
-        const updated = { ...prev };
-        let hasChanges = false;
+      try {
+        setActiveTimers(prev => {
+          const updated = { ...prev };
+          let hasChanges = false;
 
-        Object.keys(updated).forEach(id => {
-          const timer = updated[id];
-          if (!timer.isPaused) {
-            const elapsed = Date.now() - timer.startTime;
-            const newTimeRemaining = Math.max(0, DEFAULT_TIMERS.find(t => t.id === id)?.duration || 0) - Math.floor(elapsed / 1000);
-            
-            if (newTimeRemaining !== timer.timeRemaining) {
-              timer.timeRemaining = newTimeRemaining;
-              hasChanges = true;
+          Object.keys(updated).forEach(id => {
+            const timer = updated[id];
+            if (!timer.isPaused) {
+              const elapsed = Date.now() - timer.startTime;
+              const newTimeRemaining = Math.max(0, DEFAULT_TIMERS.find(t => t.id === id)?.duration || 0) - Math.floor(elapsed / 1000);
+              
+              if (newTimeRemaining !== timer.timeRemaining) {
+                timer.timeRemaining = newTimeRemaining;
+                hasChanges = true;
 
-              // Check for alerts
-              const timerConfig = DEFAULT_TIMERS.find(t => t.id === id);
-              if (timerConfig && newTimeRemaining <= 0) {
-                handleTimerAlert(timerConfig);
-                delete updated[id];
-              } else if (timerConfig?.type === 'roshan' && timerConfig.minDuration) {
-                const totalElapsed = Math.floor(elapsed / 1000);
-                if (totalElapsed === timerConfig.minDuration) {
-                  toast({
-                    title: "Roshan Alert!",
-                    description: "Roshan can now spawn (minimum time reached)",
-                    variant: "default"
-                  });
-                  playEvent('roshan-spawn');
+                // Check for alerts
+                const timerConfig = DEFAULT_TIMERS.find(t => t.id === id);
+                if (timerConfig && newTimeRemaining <= 0) {
+                  handleTimerAlert(timerConfig);
+                  delete updated[id];
+                } else if (timerConfig?.type === 'roshan' && timerConfig.minDuration) {
+                  const totalElapsed = Math.floor(elapsed / 1000);
+                  if (totalElapsed === timerConfig.minDuration) {
+                    toast({
+                      title: "Roshan Alert!",
+                      description: "Roshan can now spawn (minimum time reached)",
+                      variant: "default"
+                    });
+                    playEvent('roshan-spawn');
+                  }
                 }
               }
             }
-          }
-        });
+          });
 
-        return hasChanges ? updated : prev;
-      });
+          return hasChanges ? updated : prev;
+        });
+      } catch (error) {
+        logger.error('Error updating timers', error instanceof Error ? error : new Error(String(error)));
+      }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [isPaused, toast]);
+    return () => clearTrackedInterval(interval);
+  }, [isPaused, toast, playEvent]);
 
-  const playAlert = useCallback(() => {
-    // Simple audio alert using Web Audio API
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.8);
-    } catch (error) {
-      console.warn('Audio alert failed:', error);
-    }
-  }, []);
 
   const handleTimerAlert = useCallback((timer: Timer) => {
     toast({
@@ -472,6 +457,9 @@ export const TimerManager = () => {
 
       {/* Audio Bank - Only visible in test mode */}
       {testMode && <AudioBank />}
+
+      {/* Update Manager - Only visible in Electron */}
+      {isElectronApp && <UpdateManager />}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Game Settings Panel */}
