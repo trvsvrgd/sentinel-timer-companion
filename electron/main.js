@@ -392,36 +392,6 @@ ipcMain.handle('install-update', async () => {
   }
 });
 
-// Check for updates on app start (after a delay)
-app.whenReady().then(async () => {
-  console.log('Electron app ready, starting GSI server...');
-  
-  try {
-    await startGSIServer();
-    console.log('GSI server started, creating window...');
-    createWindow();
-    
-    // Check for updates after 5 seconds (to not block startup)
-    if (process.env.NODE_ENV !== 'development') {
-      setTimeout(() => {
-        autoUpdater.checkForUpdatesAndNotify().catch(err => {
-          console.error('Failed to check for updates:', err);
-        });
-      }, 5000);
-    }
-  } catch (error) {
-    console.error('Failed to start GSI server:', error);
-    // Still create the window even if GSI server fails
-    createWindow();
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
-
 // Rate limiting for IPC handlers
 const ipcRateLimiter = {
   calls: new Map(),
