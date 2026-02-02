@@ -1,9 +1,15 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const { fork } = require('child_process');
-const { autoUpdater } = require('electron-updater');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { fork } from 'child_process';
+import electronUpdater from 'electron-updater';
+import path from 'path';
+
+const { autoUpdater } = electronUpdater;
+import fs from 'fs';
+import os from 'os';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow;
 let gsiServerProcess = null;
@@ -96,7 +102,7 @@ process.on('SIGINT', () => {
       
       // Start the server using fork to enable IPC
       gsiServerProcess = fork(serverFile, [], {
-        stdio: ['ignore', 'pipe', 'pipe']
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc']
       });
       
       gsiServerProcess.stdout.on('data', (data) => {

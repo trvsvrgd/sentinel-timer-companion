@@ -1,22 +1,43 @@
 // Health monitoring and memory leak prevention
+// Works in both Node (main) and browser/renderer (no process global)
 
 import { logger } from './logger';
 
+interface MemorySnapshot {
+  heapUsed: number;
+  heapTotal: number;
+  rss?: number;
+  external?: number;
+}
+
 interface HealthMetrics {
-  memoryUsage: NodeJS.MemoryUsage;
+  memoryUsage: MemorySnapshot;
   timestamp: number;
   componentMounts: number;
   activeTimers: number;
   activeListeners: number;
 }
 
+function getMemoryUsage(): MemorySnapshot {
+  if (typeof process !== 'undefined' && process.memoryUsage) {
+    const m = process.memoryUsage();
+    return { heapUsed: m.heapUsed, heapTotal: m.heapTotal, rss: m.rss, external: m.external };
+  }
+  const perf = typeof performance !== 'undefined' ? performance : null;
+  const mem = perf && 'memory' in perf ? (perf as Performance & { memory: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory : null;
+  if (mem) {
+    return { heapUsed: mem.usedJSHeapSize, heapTotal: mem.totalJSHeapSize };
+  }
+  return { heapUsed: 0, heapTotal: 0 };
+}
+
 class HealthMonitor {
   private metrics: HealthMetrics[] = [];
   private maxMetrics = 50;
-  private checkInterval: NodeJS.Timeout | null = null;
+  private checkInterval: ReturnType<typeof setInterval> | null = null;
   private memoryThreshold = 200 * 1024 * 1024; // 200MB
   private componentMountCount = 0;
-  private activeTimers = new Set<number | NodeJS.Timeout>();
+  private activeTimers = new Set<number | ReturnType<typeof setInterval>>();
   private activeListeners = new Set<() => void>();
 
   start() {
@@ -42,7 +63,7 @@ class HealthMonitor {
 
   private collectMetrics() {
     const metrics: HealthMetrics = {
-      memoryUsage: process.memoryUsage(),
+      memoryUsage: getMemoryUsage(),
       timestamp: Date.now(),
       componentMounts: this.componentMountCount,
       activeTimers: this.activeTimers.size,
@@ -101,11 +122,11 @@ class HealthMonitor {
     }
   }
 
-  trackTimer(timerId: number | NodeJS.Timeout) {
+  trackTimer(timerId: number | ReturnType<typeof setInterval>) {
     this.activeTimers.add(timerId);
   }
 
-  untrackTimer(timerId: number | NodeJS.Timeout) {
+  untrackTimer(timerId: number | ReturnType<typeof setInterval>) {
     this.activeTimers.delete(timerId);
   }
 

@@ -1,5 +1,6 @@
-const { spawn } = require('child_process');
-const { createServer } = require('vite');
+import { spawn } from 'child_process';
+import path from 'path';
+import { createServer } from 'vite';
 
 async function startDev() {
   // Start Vite dev server
@@ -9,10 +10,17 @@ async function startDev() {
   await server.listen();
   console.log('Vite dev server started on http://localhost:5173');
 
-  // Start Electron
-  const electronProcess = spawn('electron', ['electron/main.js'], {
+  // Run Electron from node_modules (not PATH)
+  const electronBin = path.join(
+    process.cwd(),
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'electron.cmd' : 'electron'
+  );
+  const electronProcess = spawn(electronBin, ['electron/main.js'], {
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'development' }
+    env: { ...process.env, NODE_ENV: 'development' },
+    shell: process.platform === 'win32'
   });
 
   electronProcess.on('close', () => {
