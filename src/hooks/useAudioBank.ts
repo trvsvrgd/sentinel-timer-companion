@@ -74,7 +74,9 @@ export const useAudioBank = () => {
       }
       const storedHero = localStorage.getItem('selectedHero');
       if (storedHero) setSelectedHero(storedHero);
-    } catch {}
+    } catch {
+      // Ignore invalid stored data
+    }
   }, []);
 
   // Persist custom audio files to localStorage (only custom, not built-ins)
@@ -82,40 +84,24 @@ export const useAudioBank = () => {
     try {
       const custom = audioFiles.filter(f => !f.isBuiltIn);
       localStorage.setItem('customAudioFiles', JSON.stringify(custom));
-    } catch {}
+    } catch {
+      // Ignore quota or serialization errors
+    }
   }, [audioFiles]);
 
   // Persist selected hero
   useEffect(() => {
     try {
       localStorage.setItem('selectedHero', selectedHero);
-    } catch {}
+    } catch {
+      // Ignore quota errors
+    }
   }, [selectedHero]);
 
-  const playAudio = useCallback(async (audioId: string) => {
-    const audioFile = audioFiles.find(f => f.id === audioId);
-    if (!audioFile) return;
-
-    setIsPlaying(audioId);
-
-    try {
-      if (audioFile.isBuiltIn) {
-        // For built-in sounds, use Web Audio API to generate placeholder sounds
-        await playBuiltInSound(audioId);
-      } else if (audioFile.url) {
-        // For uploaded files, play the actual audio
-        const audio = new Audio(audioFile.url);
-        await audio.play();
-      }
-    } catch (error) {
-      console.warn('Failed to play audio:', error);
-    } finally {
-      setIsPlaying(null);
-    }
-  }, [audioFiles]);
-
   const playBuiltInSound = useCallback(async (soundId: string) => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const Ctor = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) throw new Error('AudioContext not supported');
+    const audioContext = new Ctor();
     
     switch (soundId) {
       case 'roshan-spawn':
@@ -143,6 +129,28 @@ export const useAudioBank = () => {
         await playComplexTone(audioContext, [800], 0.8, 'sine');
     }
   }, []);
+
+  const playAudio = useCallback(async (audioId: string) => {
+    const audioFile = audioFiles.find(f => f.id === audioId);
+    if (!audioFile) return;
+
+    setIsPlaying(audioId);
+
+    try {
+      if (audioFile.isBuiltIn) {
+        // For built-in sounds, use Web Audio API to generate placeholder sounds
+        await playBuiltInSound(audioId);
+      } else if (audioFile.url) {
+        // For uploaded files, play the actual audio
+        const audio = new Audio(audioFile.url);
+        await audio.play();
+      }
+    } catch (error) {
+      console.warn('Failed to play audio:', error);
+    } finally {
+      setIsPlaying(null);
+    }
+  }, [audioFiles, playBuiltInSound]);
 
   const playEvent = useCallback(async (eventId: NotificationEvent, opts?: { hero?: string }) => {
     const desiredHero = (opts?.hero ?? selectedHero).toLowerCase();

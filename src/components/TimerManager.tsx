@@ -92,6 +92,27 @@ export const TimerManager = () => {
   const { gameState, connectionStatus, isConnected, error, connect, disconnect, syncGameTime, isGameInProgress } = 
     electronGSI.isElectron ? electronGSI : webGSI;
 
+  const handleTimerAlert = useCallback((timer: Timer) => {
+    toast({
+      title: `${timer.name} Alert!`,
+      description: `${timer.name} timer has completed`,
+      variant: "default"
+    });
+    
+    if (timer.audioAlert) {
+      const mapping: Record<string, NotificationEvent> = {
+        'roshan': 'roshan-spawn',
+        'bounty-rune': 'rune-spawn',
+        'power-rune': 'rune-spawn',
+        'lotus': 'lotus-bloom',
+        'neutral-pull': 'neutral-ready',
+        'wisdom-shrine': 'wisdom-available'
+      };
+      const evt = mapping[timer.id] || 'timer-alert';
+      playEvent(evt);
+    }
+  }, [toast, playEvent]);
+
   // Update timers every second with tracked interval
   useEffect(() => {
     const interval = createTrackedInterval(() => {
@@ -140,29 +161,7 @@ export const TimerManager = () => {
     }, 1000);
 
     return () => clearTrackedInterval(interval);
-  }, [isPaused, toast, playEvent]);
-
-
-  const handleTimerAlert = useCallback((timer: Timer) => {
-    toast({
-      title: `${timer.name} Alert!`,
-      description: `${timer.name} timer has completed`,
-      variant: "default"
-    });
-    
-    if (timer.audioAlert) {
-      const mapping: Record<string, NotificationEvent> = {
-        'roshan': 'roshan-spawn',
-        'bounty-rune': 'rune-spawn',
-        'power-rune': 'rune-spawn',
-        'lotus': 'lotus-bloom',
-        'neutral-pull': 'neutral-ready',
-        'wisdom-shrine': 'wisdom-available'
-      };
-      const evt = mapping[timer.id] || 'timer-alert';
-      playEvent(evt);
-    }
-  }, [toast, playEvent]);
+  }, [isPaused, toast, playEvent, handleTimerAlert]);
 
   const startTimer = useCallback((id: string) => {
     const timer = DEFAULT_TIMERS.find(t => t.id === id);

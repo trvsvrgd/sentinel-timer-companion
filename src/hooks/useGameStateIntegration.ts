@@ -23,7 +23,7 @@ export const useGameStateIntegration = () => {
     setConnectionAttempts(0);
     setError(null);
     pollGameState();
-  }, [connectionStatus]);
+  }, [connectionStatus, pollGameState]);
 
   const pollGameState = useCallback(async () => {
     try {

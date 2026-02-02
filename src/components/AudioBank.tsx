@@ -8,6 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Play, Upload, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { useAudioBank, type AudioFile, type NotificationEvent } from '@/hooks/useAudioBank';
 
+const AUDIO_AUDIO_EVENTS: { id: NotificationEvent; label: string }[] = [
+  { id: 'roshan-spawn', label: 'Roshan Spawn' },
+  { id: 'roshan-death', label: 'Roshan Death' },
+  { id: 'rune-spawn', label: 'Rune Spawn' },
+  { id: 'lotus-bloom', label: 'Lotus Bloom' },
+  { id: 'neutral-ready', label: 'Neutral Ready' },
+  { id: 'wisdom-available', label: 'Wisdom Shrine' },
+  { id: 'timer-alert', label: 'General Alert' }
+];
+
 export const AudioBank = () => {
   const { audioFiles, isPlaying, playAudio, playEvent, addCustomAudio, removeCustomAudio, updateAudioConfig, selectedHero, setSelectedHero } = useAudioBank();
   const [filter, setFilter] = useState<string>('all');
@@ -51,15 +61,6 @@ export const AudioBank = () => {
   };
 
   const uniqueHeroes = Array.from(new Set(audioFiles.map(a => (a.hero || 'Any'))));
-  const EVENTS: { id: NotificationEvent; label: string }[] = [
-    { id: 'roshan-spawn', label: 'Roshan Spawn' },
-    { id: 'roshan-death', label: 'Roshan Death' },
-    { id: 'rune-spawn', label: 'Rune Spawn' },
-    { id: 'lotus-bloom', label: 'Lotus Bloom' },
-    { id: 'neutral-ready', label: 'Neutral Ready' },
-    { id: 'wisdom-available', label: 'Wisdom Shrine' },
-    { id: 'timer-alert', label: 'General Alert' }
-  ];
 
   return (
     <div className="space-y-4">
@@ -108,13 +109,13 @@ export const AudioBank = () => {
           </div>
           <div>
             <Label htmlFor="event-filter">Filter by Event</Label>
-            <Select value={eventFilter} onValueChange={(v) => setEventFilter(v as any)}>
+            <Select value={eventFilter} onValueChange={(v) => setEventFilter(v as 'all' | NotificationEvent)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="All Events" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Events</SelectItem>
-                {EVENTS.map(e => (
+                {AUDIO_EVENTS.map(e => (
                   <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -146,7 +147,7 @@ export const AudioBank = () => {
                   <SelectValue placeholder="Choose event" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EVENTS.map(e => (
+                  {AUDIO_EVENTS.map(e => (
                     <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -224,7 +225,7 @@ export const AudioBank = () => {
             <Badge variant="outline" className="text-xs">Hero: {selectedHero}</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {EVENTS.map(e => {
+            {AUDIO_EVENTS.map(e => {
               const countForHero = audioFiles.filter(a => a.event === e.id && (((a.hero || 'Any') === selectedHero) || ((a.hero || 'Any') === 'Any'))).length;
               return (
                 <Card key={e.id} className="p-3">

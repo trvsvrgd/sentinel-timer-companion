@@ -34,5 +34,5 @@ export interface RawGSIData {
   paused?: boolean;
   game_state?: string;
   winner?: number;
-  [key: string]: any; // Allow other GSI fields
+  [key: string]: unknown; // Allow other GSI fields
 }
