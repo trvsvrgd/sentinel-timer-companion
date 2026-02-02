@@ -218,7 +218,7 @@ const createWindow = () => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       // Security: Disable web security only if absolutely necessary
       webSecurity: true,
       // Prevent new window creation

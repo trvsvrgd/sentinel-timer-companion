@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+const { contextBridge, ipcRenderer } = require('electron');
 
 // Rate limiting for IPC calls
 const rateLimiter = {
@@ -9,11 +9,11 @@ const rateLimiter = {
     const now = Date.now();
     const calls = this.calls.get(key) || [];
     const recentCalls = calls.filter(time => now - time < this.windowMs);
-    
+
     if (recentCalls.length >= this.maxCalls) {
       return false;
     }
-    
+
     recentCalls.push(now);
     this.calls.set(key, recentCalls);
     return true;
@@ -53,7 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       throw error;
     }
   },
-  
+
   restartGSIServer: async () => {
     if (!rateLimiter.checkLimit('restartGSIServer')) {
       throw new Error('Rate limit exceeded for restartGSIServer');
@@ -65,7 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       throw error;
     }
   },
-  
+
   // Auto-updater API
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
@@ -104,7 +104,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeListener('update-progress', wrappedCallback);
     };
   },
-  
+
   onGameStateUpdate: (callback) => {
     try {
       validateCallback(callback);
@@ -120,7 +120,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const wrappedCallback = (_event, data) => {
       try {
         const now = Date.now();
-        
+
         // Rate limit message processing
         if (now - lastMessageTime < 100) {
           messageCount++;
@@ -143,9 +143,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         console.error('Error in game state update callback:', error);
       }
     };
-    
+
     ipcRenderer.on('gsi-game-state-update', wrappedCallback);
-    
+
     // Return cleanup function
     return () => {
       ipcRenderer.removeListener('gsi-game-state-update', wrappedCallback);

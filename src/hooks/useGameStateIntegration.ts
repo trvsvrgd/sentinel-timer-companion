@@ -16,15 +16,6 @@ export const useGameStateIntegration = () => {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const maxRetries = 3;
 
-  const connect = useCallback(() => {
-    if (connectionStatus === 'connecting') return;
-    
-    setConnectionStatus('connecting');
-    setConnectionAttempts(0);
-    setError(null);
-    pollGameState();
-  }, [connectionStatus, pollGameState]);
-
   const pollGameState = useCallback(async () => {
     try {
       setConnectionAttempts(prev => prev + 1);
@@ -113,6 +104,15 @@ export const useGameStateIntegration = () => {
       }
     }
   }, [connectionStatus, connectionAttempts, maxRetries]);
+
+  const connect = useCallback(() => {
+    if (connectionStatus === 'connecting') return;
+
+    setConnectionStatus('connecting');
+    setConnectionAttempts(0);
+    setError(null);
+    pollGameState();
+  }, [connectionStatus, pollGameState]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
