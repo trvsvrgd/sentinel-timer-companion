@@ -11,6 +11,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.disableHardwareAcceleration();
+
 let mainWindow;
 let gsiServerProcess = null;
 let latestGameState = null;
@@ -252,6 +254,9 @@ const createWindow = () => {
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    if (process.argv.includes('--open-devtools')) {
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
+    }
   }
 
   mainWindow.on('closed', () => {
