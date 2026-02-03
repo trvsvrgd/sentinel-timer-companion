@@ -253,11 +253,21 @@ const createWindow = () => {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    const productionIndexPath = path.join(__dirname, '..', 'index.html');
+    console.log('Final Path:', productionIndexPath);
+    mainWindow.loadFile(productionIndexPath);
     if (process.argv.includes('--open-devtools')) {
       mainWindow.webContents.openDevTools({ mode: 'detach' });
     }
   }
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error('Renderer failed to load', {
+      errorCode,
+      errorDescription,
+      validatedURL
+    });
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
