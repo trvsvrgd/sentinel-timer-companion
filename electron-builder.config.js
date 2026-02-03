@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   appId: 'com.sentineltimer.app',
   productName: 'Sentinel Timer',
   copyright: 'Copyright © 2025 Sentinel Timer',
