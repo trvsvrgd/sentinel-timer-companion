@@ -8,6 +8,8 @@
   "main": "electron/main.js",
   "type": "module",
   "scripts": {
+    "clean": "rimraf dist",
+    "prebuild": "taskkill /F /IM sentinel-timer.exe /T /FI \"status eq running\" || exit 0",
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
