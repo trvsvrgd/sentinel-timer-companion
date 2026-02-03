@@ -253,7 +253,13 @@ const createWindow = () => {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
-    const productionIndexPath = path.join(__dirname, '..', 'index.html');
+    const productionIndexCandidates = [
+      path.join(__dirname, '..', 'index.html'),
+      path.join(__dirname, '..', 'dist', 'index.html')
+    ];
+    const resolvedIndexPath = productionIndexCandidates.find(candidate => fs.existsSync(candidate));
+    const productionIndexPath = resolvedIndexPath || productionIndexCandidates[0];
+    console.log('Index candidates:', productionIndexCandidates);
     console.log('Final Path:', productionIndexPath);
     mainWindow.loadFile(productionIndexPath);
     if (process.argv.includes('--open-devtools')) {
@@ -261,12 +267,19 @@ const createWindow = () => {
     }
   }
 
+  let attemptedFallback = false;
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     console.error('Renderer failed to load', {
       errorCode,
       errorDescription,
       validatedURL
     });
+    if (!isDev && !attemptedFallback) {
+      attemptedFallback = true;
+      const fallbackPath = path.join(__dirname, '..', 'dist', 'index.html');
+      console.log('Attempting fallback Path:', fallbackPath);
+      mainWindow.loadFile(fallbackPath);
+    }
   });
 
   mainWindow.on('closed', () => {
