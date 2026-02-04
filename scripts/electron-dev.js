@@ -5,10 +5,10 @@ import { createServer } from 'vite';
 async function startDev() {
   // Start Vite dev server
   const server = await createServer({
-    server: { port: 5173 }
+    server: { port: 8080 }
   });
   await server.listen();
-  console.log('Vite dev server started on http://localhost:5173');
+  console.log('Vite dev server started on http://localhost:8080');
 
   // Run Electron from node_modules (not PATH)
   const electronBin = path.join(
@@ -19,7 +19,11 @@ async function startDev() {
   );
   const electronProcess = spawn(electronBin, ['electron/main.js'], {
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'development' },
+    env: {
+      ...process.env,
+      NODE_ENV: 'development',
+      VITE_DEV_SERVER_URL: 'http://localhost:8080'
+    },
     shell: process.platform === 'win32'
   });
 

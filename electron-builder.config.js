@@ -9,18 +9,11 @@ export default {
   files: [
     'dist/**/*',
     'electron/**/*',
-    'node_modules/**/*',
     'package.json',
-    '!node_modules/**/*.{md,ts,map}',
-    '!node_modules/.bin',
-    '!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}',
-    '!.editorconfig',
-    '!**/._*',
-    '!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}',
-    '!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}',
-    '!**/{appveyor.yml,.travis.yml,circle.yml}',
-    '!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}'
+    '!src/**/*',
+    '!index.html'
   ],
+  asar: true,
   extraMetadata: {
     main: 'electron/main.js'
   },
