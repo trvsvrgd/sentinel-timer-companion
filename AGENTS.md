@@ -18,8 +18,6 @@ Single-service React + TypeScript + Vite web application (with optional Electron
 
 ### Known issues
 
-- **ESLint crash**: The lockfile pins `eslint@9.39.2` with `typescript-eslint@8.11.0`, which are incompatible. ESLint's `no-unused-expressions` rule changed its internal API in 9.39.x, breaking `@typescript-eslint/no-unused-expressions`. `npm run lint` will error with `TypeError: Cannot read properties of undefined (reading 'allowShortCircuit')`. To fix, the lockfile needs regenerating with compatible versions.
-- **Peer dependency conflict**: `@vitejs/plugin-react-swc@^3.5.0` declares `peer vite@"^4 || ^5"`, but the project uses `vite@^7.3.1`. Use `--legacy-peer-deps` when running `npm ci` or `npm install`.
 - **`prebuild` script**: The `prebuild` npm script calls `taskkill` (Windows-only). It will fail on Linux but is swallowed by `|| exit 0`. This is harmless.
 
 ### Gotchas
